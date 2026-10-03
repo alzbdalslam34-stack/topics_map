@@ -1,0 +1,105 @@
+enum BleMatchType { name, uuid, mac }
+enum TopicPriority { high, medium, low }
+enum TopicStatus { active, snoozed, completed, dismissed }
+
+class BleContact {
+  final String id;
+  final String name;
+  final String avatarColor;
+  final BleMatchType signatureType;
+  final String signatureValue;
+  final int rssiThreshold; // e.g. -72 dBm
+  int? currentRssi;
+  double? estimatedDistance;
+  DateTime? lastSeen;
+
+  BleContact({
+    required this.id,
+    required this.name,
+    required this.avatarColor,
+    required this.signatureType,
+    required this.signatureValue,
+    this.rssiThreshold = -74,
+    this.currentRssi,
+    this.estimatedDistance,
+    this.lastSeen,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'avatarColor': avatarColor,
+    'signatureType': signatureType.name,
+    'signatureValue': signatureValue,
+    'rssiThreshold': rssiThreshold,
+  };
+
+  factory BleContact.fromJson(Map<String, dynamic> json) => BleContact(
+    id: json['id'],
+    name: json['name'],
+    avatarColor: json['avatarColor'] ?? '#3b82f6',
+    signatureType: BleMatchType.values.byName(json['signatureType']),
+    signatureValue: json['signatureValue'],
+    rssiThreshold: json['rssiThreshold'] ?? -74,
+  );
+}
+
+class AlarmSettings {
+  final String ringtone; // 'radar_ping', 'gentle_chime', etc.
+  final bool vibrate;
+  final int snoozeMinutes;
+
+  AlarmSettings({
+    this.ringtone = 'radar_ping',
+    this.vibrate = true,
+    this.snoozeMinutes = 10,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'ringtone': ringtone,
+    'vibrate': vibrate,
+    'snoozeMinutes': snoozeMinutes,
+  };
+
+  factory AlarmSettings.fromJson(Map<String, dynamic> json) => AlarmSettings(
+    ringtone: json['ringtone'] ?? 'radar_ping',
+    vibrate: json['vibrate'] ?? true,
+    snoozeMinutes: json['snoozeMinutes'] ?? 10,
+  );
+}
+
+class TopicNote {
+  final String id;
+  final String contactId;
+  String title;
+  String content;
+  TopicPriority priority;
+  TopicStatus status;
+  DateTime createdAt;
+  DateTime? snoozeUntil;
+  AlarmSettings alarmSettings;
+
+  TopicNote({
+    required this.id,
+    required this.contactId,
+    required this.title,
+    required this.content,
+    this.priority = TopicPriority.medium,
+    this.status = TopicStatus.active,
+    required this.createdAt,
+    this.snoozeUntil,
+    required this.alarmSettings,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'contactId': contactId,
+    'title': title,
+    'content': content,
+    'priority': priority.name,
+    'status': status.name,
+    'createdAt': createdAt.toIso8601String(),
+    'snoozeUntil': snoozeUntil?.toIso8601String(),
+    'alarmSettings': alarmSettings.toJson(),
+  };
+}

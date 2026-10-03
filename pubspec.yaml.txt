@@ -1,0 +1,44 @@
+name: topics_map
+description: Proximity-based topic and reminder app using Bluetooth Low Energy (BLE).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # --- Core BLE & Scanning ---
+  flutter_blue_plus: ^1.34.5       # Robust cross-platform BLE scanning & RSSI tracking
+  
+  # --- Background Execution & Foreground Task ---
+  flutter_foreground_task: ^8.1.0  # Keeps Android service alive with persistent notification
+  permission_handler: ^11.3.1      # Runtime permissions (Bluetooth, Location, Notification)
+  
+  # --- Notifications & Audio Synthesizer ---
+  flutter_local_notifications: ^17.2.1 # Custom sound channels, actions & heads-up alarms
+  audioplayers: ^6.0.0             # In-app ringtone playback & preview
+  vibration: ^2.0.1                # Custom vibration haptic patterns
+
+  # --- State Management & Storage ---
+  flutter_riverpod: ^2.5.1         # Clean Architecture reactive state management
+  shared_preferences: ^2.2.3       # Offline local storage
+  intl: ^0.19.0                    # Multi-language & RTL/LTR formatting
+  uuid: ^4.4.0                     # Unique entity generation
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sounds/radar_ping.mp3
+    - assets/sounds/gentle_chime.mp3
+    - assets/sounds/pulse_alert.mp3
+    - assets/sounds/urgent_bell.mp3

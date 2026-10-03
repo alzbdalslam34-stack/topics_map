@@ -1,0 +1,96 @@
+import 'dart:typed_data';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../models/ble_contact.dart';
+import '../models/topic_note.dart';
+
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  Future<void> init() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+
+    await _notificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        final payload = response.payload;
+        final actionId = response.actionId;
+        debugPrint('[Notification] User tapped: action=$actionId, payload=$payload');
+        // Handle Action IDs: 'snooze_10m' or 'mark_discussed'
+      },
+    );
+  }
+
+  Future<void> showProximityAlarm({
+    required BleContact contact,
+    required List<TopicNote> notes,
+    required double distanceMeters,
+    required String ringtone,
+    required bool vibrate,
+  }) async {
+    final noteCount = notes.length;
+    final primaryTitle = notes.first.title;
+
+    // Vibration pattern: [delay, vibrate, sleep, vibrate]
+    final Int64List vibrationPattern = Int64List.fromList([0, 400, 200, 400, 200, 800]);
+
+    final androidDetails = AndroidNotificationDetails(
+      'proximity_alerts_$ringtone',
+      'Proximity Topic Alarms',
+      channelDescription: 'High-priority notifications when contacts enter BLE range.',
+      importance: Importance.max,
+      priority: Priority.high,
+      sound: RawResourceAndroidNotificationSound(ringtone),
+      playSound: ringtone != 'silent',
+      enableVibration: vibrate,
+      vibrationPattern: vibrate ? vibrationPattern : null,
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.alarm,
+      actions: <AndroidNotificationAction>[
+        const AndroidNotificationAction(
+          'mark_discussed',
+          'Discussed (Done)',
+          showsUserInterface: false,
+        ),
+        const AndroidNotificationAction(
+          'snooze_10m',
+          'Snooze 10m',
+          showsUserInterface: false,
+        ),
+      ],
+    );
+
+    final iosDetails = DarwinNotificationDetails(
+      sound: ringtone != 'silent' ? '$ringtone.aiff' : null,
+      presentAlert: true,
+      presentSound: ringtone != 'silent',
+      presentBadge: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
+    );
+
+    final notificationDetails = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    final String title = '📍 ${contact.name} is nearby (${distanceMeters.toStringAsFixed(1)}m)';
+    final String body = noteCount == 1
+        ? primaryTitle
+        : '$primaryTitle (+${noteCount - 1} more topics)';
+
+    await _notificationsPlugin.show(
+      contact.id.hashCode,
+      title,
+      body,
+      notificationDetails,
+      payload: contact.id,
+    );
+  }
+}

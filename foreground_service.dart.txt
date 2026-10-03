@@ -1,0 +1,92 @@
+import 'dart:isolate';
+import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'ble_proximity_service.dart';
+
+@pragma('vm:entry-point')
+void startForegroundCallback() {
+  FlutterForegroundTask.setTaskHandler(ProximityTaskHandler());
+}
+
+class ProximityTaskHandler extends TaskHandler {
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    debugPrint('[ForegroundService] Background Task Started at $timestamp');
+    await BleProximityService().startScan(scanIntervalSec: 8);
+  }
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    // Periodic heartbeat to verify BLE scanner status
+    if (!BleProximityService().isScanning) {
+      BleProximityService().startScan(scanIntervalSec: 8);
+    }
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp) async {
+    debugPrint('[ForegroundService] Background Task Destroyed');
+    await BleProximityService().stopScan();
+  }
+
+  @override
+  void onNotificationButtonPressed(String id) {
+    if (id == 'btn_pause') {
+      BleProximityService().stopScan();
+    }
+  }
+
+  @override
+  void onNotificationPressed() {
+    FlutterForegroundTask.launchApp();
+  }
+}
+
+class ForegroundServiceManager {
+  static Future<void> init() async {
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'topicsmap_proximity_channel',
+        channelName: 'TopicsMap Proximity Scanner',
+        channelDescription: 'Active BLE background monitoring for nearby contacts.',
+        channelImportance: NotificationChannelImportance.LOW, // Silent status bar indicator
+        priority: NotificationPriority.LOW,
+        iconData: const NotificationIconData(
+          resType: ResourceType.mipmap,
+          resPrefix: ResourcePrefix.ic,
+          name: 'launcher',
+        ),
+        buttons: [
+          const NotificationButton(id: 'btn_pause', text: 'Pause Scanning'),
+        ],
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: false,
+        playSound: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.repeat(8000), // Repeat every 8s
+        autoRunOnBoot: true,
+        autoRunOnMyPackageReplaced: true,
+        allowWakeLock: true,
+        allowWifiLock: false,
+      ),
+    );
+  }
+
+  static Future<bool> startService() async {
+    if (await FlutterForegroundTask.isRunningService) {
+      return true;
+    }
+    return await FlutterForegroundTask.startService(
+      serviceId: 256,
+      notificationTitle: 'TopicsMap is Active',
+      notificationText: 'Scanning for registered contacts nearby...',
+      callback: startForegroundCallback,
+    );
+  }
+
+  static Future<bool> stopService() async {
+    return await FlutterForegroundTask.stopService();
+  }
+}
